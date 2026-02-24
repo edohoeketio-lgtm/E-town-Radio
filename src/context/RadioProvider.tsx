@@ -2,18 +2,21 @@ import { useReducer, useEffect, useRef, type ReactNode } from 'react';
 import { RadioContext, AudioRefsContext } from './RadioContexts';
 import { RadioState, RadioAction, Station } from '../types/radio';
 
+const ALL_AUDIO = [
+    '/audio/lofi.mp3',
+    '/audio/Perfect Enemy - Vinnie Paz.mp3',
+    '/audio/electronic.mp3',
+    '/audio/sexy music..mp3',
+    '/audio/ambient.mp3'
+];
+
 const STATIONS: Station[] = [
     {
         id: 'feel-good-1',
         name: 'Feel-Good',
         description: 'Vibes for a good time',
         sourceType: 'local',
-        sourceUrls: [
-            '/audio/lofi.mp3',
-            '/audio/Birds & the Bees - Baby Keem.mp3',
-            '/audio/Good Flirts - Baby Keem.mp3',
-            '/audio/Poor Thang - J. Cole.mp3'
-        ],
+        sourceUrls: ALL_AUDIO,
         tags: ['Vibe', 'Happy', 'Soul'],
         mockSegments: ['Sunshine Day', 'Good Times Roll', 'Morning Coffee', 'Sunday Drive', 'Golden Hour']
     },
@@ -22,12 +25,7 @@ const STATIONS: Station[] = [
         name: 'Lo-Fi Hip Hop',
         description: 'Quality hip-hop and chill beats',
         sourceType: 'local',
-        sourceUrls: [
-            '/audio/Perfect Enemy - Vinnie Paz.mp3',
-            '/audio/Birds & the Bees - Baby Keem.mp3',
-            '/audio/Good Flirts - Baby Keem.mp3',
-            '/audio/Poor Thang - J. Cole.mp3'
-        ],
+        sourceUrls: ALL_AUDIO,
         tags: ['Chill', 'Study', 'Beats'],
         mockSegments: ['Rainy Window', 'Homework Edit', 'Late Night Coffee', 'Vinyl Crackle loops', 'Cat on Keyboard']
     },
@@ -36,7 +34,7 @@ const STATIONS: Station[] = [
         name: 'Minimal Techno',
         description: 'Deep driving minimal techno, 128bpm',
         sourceType: 'local',
-        sourceUrls: ['/audio/electronic.mp3'],
+        sourceUrls: ALL_AUDIO,
         tags: ['Techno', 'Minimal', 'Dark'],
         mockSegments: ['Warehouse Echo', 'Berlin Sub', 'Modulator X', 'Kick Drum Therapy', '3AM Vibe']
     },
@@ -45,7 +43,7 @@ const STATIONS: Station[] = [
         name: 'Jazz Fusion',
         description: 'Upbeat Jazz Fusion with complex solos',
         sourceType: 'local',
-        sourceUrls: ['/audio/sexy music..mp3'],
+        sourceUrls: ALL_AUDIO,
         tags: ['Jazz', 'Fusion', 'Funk'],
         mockSegments: ['Sax Attack', 'Bass Slap 101', 'Fusion Kitchen', 'Smooth Operator', 'Blue Note Vibe']
     },
@@ -54,7 +52,7 @@ const STATIONS: Station[] = [
         name: 'Afrobeat',
         description: 'Energetic Afrobeat rhythms',
         sourceType: 'local',
-        sourceUrls: ['/audio/electronic.mp3'],
+        sourceUrls: ALL_AUDIO,
         tags: ['Afrobeat', 'Ryhthm', 'Brass'],
         mockSegments: ['Lagos Night Drive', 'Palmwine Groove', 'Talking Drum', 'Heatwave', 'Market Day']
     },
@@ -63,7 +61,7 @@ const STATIONS: Station[] = [
         name: 'Synthwave',
         description: 'Retro 80s Synthwave, neon lights',
         sourceType: 'local',
-        sourceUrls: ['/audio/electronic.mp3'],
+        sourceUrls: ALL_AUDIO,
         tags: ['Retro', 'Synth', '80s'],
         mockSegments: ['Neon Arps', 'Cyber Chase', 'VHS Dreams', 'Nightcall Cover', 'Grid Runner']
     },
@@ -72,7 +70,7 @@ const STATIONS: Station[] = [
         name: 'Ambient',
         description: 'Ethereal soundscapes',
         sourceType: 'local',
-        sourceUrls: ['/audio/ambient.mp3'],
+        sourceUrls: ALL_AUDIO,
         tags: ['Ambient', 'Drone', 'Sleep'],
         mockSegments: ['Deep Space', 'Ocean Drift', 'Beta Waves', 'Cloud Computing', 'Silence & Awe']
     }
@@ -183,6 +181,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     const gainB = useRef<GainNode | null>(null);
 
     const activePlayer = useRef<'A' | 'B'>('A');
+    const lastPlayedStationId = useRef<string | null>(null);
 
     const initAudio = () => {
         if (audioContextRef.current) return;
@@ -202,8 +201,8 @@ export function RadioProvider({ children }: { children: ReactNode }) {
         trebleFilter.type = 'lowpass';
         trebleFilter.frequency.value = 24000;
 
-        const elA = new Audio(); elA.crossOrigin = "anonymous"; elA.loop = true;
-        const elB = new Audio(); elB.crossOrigin = "anonymous"; elB.loop = true;
+        const elA = new Audio(); elA.crossOrigin = "anonymous"; elA.loop = false;
+        const elB = new Audio(); elB.crossOrigin = "anonymous"; elB.loop = false;
 
         audioA.current = elA;
         audioB.current = elB;
@@ -261,8 +260,10 @@ export function RadioProvider({ children }: { children: ReactNode }) {
 
         const performCrossfade = async () => {
             if (!nextAudio || !nextGain || !currentGain || !currentAudio) return;
-            const isAlreadyPlayingStation = targetStation.sourceUrls.some(url => nextAudio.src.includes(url));
-            if (isAlreadyPlayingStation && !nextAudio.paused) return;
+
+            // Only crossfade if we've actually switched stations
+            if (lastPlayedStationId.current === targetStation.id && state.status === 'PLAYING') return;
+            lastPlayedStationId.current = targetStation.id;
 
             console.log(`Crossfading to ${targetStation.name} on Player ${nextPlayerId}`);
             dispatch({ type: 'ADD_LOG', text: `Crossfading to ${targetStation.name}...` });
@@ -272,7 +273,8 @@ export function RadioProvider({ children }: { children: ReactNode }) {
 
             // Re-attach auto-shuffle listener on new tracks
             nextAudio.onended = () => {
-                const nextRandomUrl = targetStation.sourceUrls[Math.floor(Math.random() * targetStation.sourceUrls.length)];
+                const availableUrls = targetStation.sourceUrls.filter(u => u !== randomUrl) || targetStation.sourceUrls;
+                const nextRandomUrl = availableUrls[Math.floor(Math.random() * availableUrls.length)];
                 nextAudio.src = nextRandomUrl;
                 nextAudio.play().catch(e => console.error('Auto-shuffle failed', e));
                 dispatch({ type: 'ADD_LOG', text: `Shuffled to next track in ${targetStation.name}` });
@@ -328,8 +330,10 @@ export function RadioProvider({ children }: { children: ReactNode }) {
                         player.src = s.sourceUrls[Math.floor(Math.random() * s.sourceUrls.length)];
 
                         // Ensure auto-play on track end
+                        const currentUrl = player.src;
                         player.onended = () => {
-                            const nextUrl = s.sourceUrls[Math.floor(Math.random() * s.sourceUrls.length)];
+                            const availableUrls = s.sourceUrls.filter(u => !currentUrl.includes(u)) || s.sourceUrls;
+                            const nextUrl = availableUrls[Math.floor(Math.random() * availableUrls.length)];
                             player.src = nextUrl;
                             player.play().catch(e => console.error(e));
                             dispatch({ type: 'ADD_LOG', text: `Shuffled to next track in ${s.name}` });

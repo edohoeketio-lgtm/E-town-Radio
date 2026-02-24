@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useRadio, useAudioEngine } from '../../hooks/useRadio';
 import { useAudioReal } from '../../hooks/useAudioReal';
 import { Card } from '../ui/Card';
-import { Play, Pause, Square, RefreshCcw } from '../ui/Icons';
+import { Play, Pause, Square } from '../ui/Icons';
 
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -212,15 +212,6 @@ export function Visualizer() {
                         aria-label="Stop"
                     >
                         <Square size={14} fill="currentColor" />
-                    </button>
-                    {/* Regenerate is less useful with scheduler, but kept for manual override */}
-                    <button
-                        onClick={() => { togglePlay(); /* Re-trigger play to crossfade if logic allowed */ }}
-                        className="w-10 h-10 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center text-secondary hover:bg-gray-50 active:translate-y-px active:shadow-inner transition-all opacity-50 cursor-not-allowed"
-                        aria-label="Refresh"
-                        disabled
-                    >
-                        <RefreshCcw size={14} />
                     </button>
                 </div>
 
