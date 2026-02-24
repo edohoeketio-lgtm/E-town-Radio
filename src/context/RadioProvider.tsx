@@ -182,6 +182,32 @@ export function RadioProvider({ children }: { children: ReactNode }) {
 
     const activePlayer = useRef<'A' | 'B'>('A');
     const lastPlayedStationId = useRef<string | null>(null);
+    const stationQueues = useRef<Record<string, string[]>>({});
+
+    // Helper to shuffle an array
+    const shuffleArray = (array: string[]) => {
+        const newArr = [...array];
+        for (let i = newArr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+        }
+        return newArr;
+    };
+
+    // Helper to get next track for a station without repeating
+    const getNextTrack = (stationId: string, sourceUrls: string[], currentUrl?: string): string => {
+        if (!stationQueues.current[stationId] || stationQueues.current[stationId].length === 0) {
+            // Refill and shuffle the queue
+            let shuffled = shuffleArray(sourceUrls);
+            // If the first song in new queue is the same as the last played song, swap it
+            if (currentUrl && shuffled[0] === currentUrl && shuffled.length > 1) {
+                [shuffled[0], shuffled[1]] = [shuffled[1], shuffled[0]];
+            }
+            stationQueues.current[stationId] = shuffled;
+        }
+        // Pop the next track
+        return stationQueues.current[stationId].shift()!;
+    };
 
     const initAudio = () => {
         if (audioContextRef.current) return;
@@ -268,15 +294,15 @@ export function RadioProvider({ children }: { children: ReactNode }) {
             console.log(`Crossfading to ${targetStation.name} on Player ${nextPlayerId}`);
             dispatch({ type: 'ADD_LOG', text: `Crossfading to ${targetStation.name}...` });
 
-            const randomUrl = targetStation.sourceUrls[Math.floor(Math.random() * targetStation.sourceUrls.length)];
-            nextAudio.src = randomUrl;
+            // Pull from this station's dedicated shuffle queue
+            const nextTrack = getNextTrack(targetStation.id, targetStation.sourceUrls, currentAudio?.src);
+            nextAudio.src = nextTrack;
 
             // Re-attach auto-shuffle listener on new tracks
             nextAudio.onended = () => {
-                const availableUrls = targetStation.sourceUrls.filter(u => u !== randomUrl) || targetStation.sourceUrls;
-                const nextRandomUrl = availableUrls[Math.floor(Math.random() * availableUrls.length)];
+                const nextRandomUrl = getNextTrack(targetStation.id, targetStation.sourceUrls, nextAudio.src);
                 nextAudio.src = nextRandomUrl;
-                nextAudio.play().catch(e => console.error('Auto-shuffle failed', e));
+                nextAudio.play().catch((e: Error) => console.error('Auto-shuffle failed', e));
                 dispatch({ type: 'ADD_LOG', text: `Shuffled to next track in ${targetStation.name}` });
             };
 
@@ -325,17 +351,15 @@ export function RadioProvider({ children }: { children: ReactNode }) {
         } else {
             if (player) {
                 if (!player.src) {
-                    const s = state.stations.find(st => st.id === state.activeStationId);
+                    const s = state.stations.find((st: Station) => st.id === state.activeStationId);
                     if (s) {
-                        player.src = s.sourceUrls[Math.floor(Math.random() * s.sourceUrls.length)];
+                        player.src = getNextTrack(s.id, s.sourceUrls);
 
                         // Ensure auto-play on track end
-                        const currentUrl = player.src;
                         player.onended = () => {
-                            const availableUrls = s.sourceUrls.filter(u => !currentUrl.includes(u)) || s.sourceUrls;
-                            const nextUrl = availableUrls[Math.floor(Math.random() * availableUrls.length)];
+                            const nextUrl = getNextTrack(s.id, s.sourceUrls, player.src);
                             player.src = nextUrl;
-                            player.play().catch(e => console.error(e));
+                            player.play().catch((e: Error) => console.error(e));
                             dispatch({ type: 'ADD_LOG', text: `Shuffled to next track in ${s.name}` });
                         };
                     }
@@ -386,7 +410,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
                     schedule: { ...state.schedule, remaining: state.schedule.remaining - 1 }
                 });
             } else {
-                const station = state.stations.find(s => s.id === state.activeStationId);
+                const station = state.stations.find((s: Station) => s.id === state.activeStationId);
                 if (station) {
                     const next = state.schedule.next;
                     const later = state.schedule.later;
