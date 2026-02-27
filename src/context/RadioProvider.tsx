@@ -1,6 +1,6 @@
-import { useReducer, useEffect, useRef, type ReactNode } from 'react';
+import { useReducer, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { RadioContext, AudioRefsContext } from './RadioContexts';
-import { RadioState, RadioAction, Station } from '../types/radio';
+import { RadioState, RadioAction, Station, MusicSource, SpotifyPlaylist } from '../types/radio';
 
 const ALL_AUDIO = [
     '/audio/Birds & the Bees - Baby Keem.mp3',
@@ -78,6 +78,8 @@ const STATIONS: Station[] = [
 
 const initialState: RadioState = {
     status: 'IDLE',
+    broadcastStatus: 'STANDBY',
+    role: 'listener',
     apiKey: '',
     prompt: 'Feel-Good',
     bpm: 120,
@@ -119,6 +121,8 @@ function radioReducer(state: RadioState, action: RadioAction): RadioState {
     switch (action.type) {
         case 'SET_STATUS':
             return { ...state, status: action.status };
+        case 'SET_ROLE':
+            return { ...state, role: action.role };
         case 'SET_API_KEY':
             return { ...state, apiKey: action.key };
         case 'SET_PROMPT':
@@ -162,6 +166,42 @@ function radioReducer(state: RadioState, action: RadioAction): RadioState {
             return { ...state, listenerCounts: action.counts };
         case 'UPDATE_SCHEDULE':
             return { ...state, schedule: action.schedule };
+        case 'SET_BROADCAST_STATUS':
+            return { ...state, broadcastStatus: action.status };
+        case 'CONNECT_SPOTIFY': {
+            const updatedStations = state.stations.map(s => {
+                if (s.id === action.stationId) {
+                    const existingSources = s.linkedSources || [];
+                    const otherSources = existingSources.filter(src => src.type !== 'spotify');
+                    const spotifySource: MusicSource = {
+                        id: 'spotify-root',
+                        type: 'spotify',
+                        name: 'Spotify Account',
+                        connected: true,
+                        accessToken: action.token,
+                        playlists: action.playlists
+                    };
+                    return {
+                        ...s,
+                        linkedSources: [...otherSources, spotifySource]
+                    };
+                }
+                return s;
+            });
+            return { ...state, stations: updatedStations };
+        }
+        case 'ADD_SOURCE': {
+            const updatedStations = state.stations.map(s => {
+                if (s.id === action.stationId) {
+                    return {
+                        ...s,
+                        linkedSources: [...(s.linkedSources || []), action.source]
+                    };
+                }
+                return s;
+            });
+            return { ...state, stations: updatedStations };
+        }
         default:
             return state;
     }
@@ -184,7 +224,9 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     const lastPlayedStationId = useRef<string | null>(null);
     const stationQueues = useRef<Record<string, string[]>>({});
     const stateRef = useRef(state);
-    stateRef.current = state;
+    useEffect(() => {
+        stateRef.current = state;
+    }, [state]);
 
     // Helper to shuffle an array
     const shuffleArray = (array: string[]) => {
@@ -197,10 +239,10 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     };
 
     // Helper to get next track for a station without repeating
-    const getNextTrack = (stationId: string, sourceUrls: string[], currentUrl?: string): string => {
+    const getNextTrack = useCallback((stationId: string, sourceUrls: string[], currentUrl?: string): string => {
         if (!stationQueues.current[stationId] || stationQueues.current[stationId].length === 0) {
             // Refill and shuffle the queue
-            let shuffled = shuffleArray(sourceUrls);
+            const shuffled = shuffleArray(sourceUrls);
             // If the first song in new deck is the same as the last played song, swap it
             // We use includes() because browser's audio.src is often the full absolute URL
             if (currentUrl && currentUrl.includes(shuffled[0]) && shuffled.length > 1) {
@@ -223,7 +265,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
 
         // Pop the next track
         return queue.shift()!;
-    };
+    }, []);
 
     const initAudio = () => {
         if (audioContextRef.current) return;
@@ -284,7 +326,9 @@ export function RadioProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'ADD_LOG', text: 'Broadcast Audio Engine Initialized (Dual-Source)' });
     };
 
-    const triggerCrossfade = async (targetStationId?: string) => {
+    const triggerCrossfadeRef = useRef<(stationId?: string) => Promise<void>>();
+
+    const triggerCrossfade = useCallback(async (targetStationId?: string) => {
         const ctx = audioContextRef.current;
         const currentState = stateRef.current;
         if (!ctx || currentState.status !== 'PLAYING') return;
@@ -311,7 +355,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
 
         // Re-attach listener on new tracks
         nextAudio.onended = () => {
-            triggerCrossfade(targetStation.id);
+            triggerCrossfadeRef.current?.(targetStation.id);
         };
 
         nextAudio.volume = 1;
@@ -339,7 +383,11 @@ export function RadioProvider({ children }: { children: ReactNode }) {
             console.error('Crossfade failed', e);
             dispatch({ type: 'ADD_LOG', text: 'Crossfade failed, retrying...', level: 'error' });
         }
-    };
+    }, [dispatch, getNextTrack]);
+
+    useEffect(() => {
+        triggerCrossfadeRef.current = triggerCrossfade;
+    }, [triggerCrossfade]);
 
     useEffect(() => {
         if (state.status !== 'PLAYING') return;
@@ -349,7 +397,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
         lastPlayedStationId.current = state.activeStationId;
 
         triggerCrossfade();
-    }, [state.activeStationId, state.status]);
+    }, [state.activeStationId, state.status, triggerCrossfade]);
 
     const togglePlay = async () => {
         if (!audioContextRef.current) initAudio();

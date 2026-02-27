@@ -113,9 +113,9 @@ export function Visualizer() {
     // But we still render the result
 
     return (
-        <Card className="col-span-12 lg:col-span-8 h-[320px] md:h-[400px] flex flex-col relative !p-0 bg-white shadow-sm border border-card-border overflow-hidden rounded-3xl">
+        <Card className="col-span-12 lg:col-span-8 h-[320px] md:h-[400px] flex flex-col relative !p-0 bg-card shadow-sm border border-card-border overflow-hidden rounded-3xl">
             {/* Header Strip: Broadcast Status Bar */}
-            <div className="px-5 py-3 flex justify-between items-center border-b border-card-border/50 bg-gray-50/80 backdrop-blur-md z-10">
+            <div className="px-5 py-3 flex justify-between items-center border-b border-card-border/50 bg-white/5 backdrop-blur-md z-10">
                 <div className="flex items-center gap-4">
                     <div className="flex flex-col">
                         <span className="text-[9px] uppercase tracking-[0.2em] text-secondary font-bold opacity-60">Frequency Source</span>
@@ -125,8 +125,8 @@ export function Visualizer() {
 
                 <div className="flex items-center gap-3">
                     {/* Live Indicator */}
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-white border border-card-border rounded-full shadow-sm">
-                        <div className={`w-1.5 h-1.5 rounded-full ${status === 'PLAYING' ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`} />
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-card border border-card-border rounded-full shadow-sm">
+                        <div className={`w-1.5 h-1.5 rounded-full ${status === 'PLAYING' ? 'bg-emerald-500 animate-pulse' : 'bg-secondary/30'}`} />
                         <span className="text-[9px] font-bold text-secondary uppercase tracking-wider">
                             {state.status === 'PLAYING' ? 'LIVE' : 'OFFLINE'}
                         </span>
@@ -140,14 +140,14 @@ export function Visualizer() {
 
                     <div className="w-px h-4 bg-card-border/60 mx-1 hidden sm:block"></div>
 
-                    <div className="px-2 py-1 bg-white border border-card-border rounded text-[10px] font-mono text-secondary tabular-nums shadow-sm">
+                    <div className="px-2 py-1 bg-card border border-card-border rounded text-[10px] font-mono text-secondary tabular-nums shadow-sm">
                         {bpm} BPM
                     </div>
                 </div>
             </div>
 
             {/* Canvas Area (Timeline) */}
-            <div className="relative flex-1 bg-gray-50/20">
+            <div className="relative flex-1 bg-black/20">
                 <canvas ref={canvasRef} className="w-full h-full" />
 
                 {/* Time Ticks Overlay */}
@@ -169,17 +169,17 @@ export function Visualizer() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="flex flex-col p-3 rounded-xl bg-white/90 backdrop-blur-md border border-card-border shadow-[0_4px_20px_rgba(0,0,0,0.06)]"
+                        className="flex flex-col p-3 rounded-xl bg-card/90 backdrop-blur-md border border-card-border shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
                     >
                         <span className="text-[9px] uppercase text-secondary font-bold tracking-widest mb-1 flex items-center gap-1.5">
-                            <span className={`w-1 h-1 rounded-full ${status === 'PLAYING' ? 'bg-red-500' : 'bg-gray-300'}`} />
+                            <span className={`w-1 h-1 rounded-full ${status === 'PLAYING' ? 'bg-red-500' : 'bg-secondary/30'}`} />
                             Current Program
                         </span>
                         <span className="text-sm font-semibold text-primary tracking-tight leading-tight line-clamp-2">
                             {nowPlaying}
                         </span>
                         <div className="mt-2 flex items-center gap-2">
-                            <span className="text-[9px] font-mono border border-card-border bg-gray-50 px-1.5 py-0.5 rounded text-secondary uppercase">
+                            <span className="text-[9px] font-mono border border-card-border bg-white/5 px-1.5 py-0.5 rounded text-secondary uppercase">
                                 {state.programMode}
                             </span>
                         </div>
@@ -187,7 +187,7 @@ export function Visualizer() {
                 </AnimatePresence>
 
                 {/* Up Next (Mini Schedule) */}
-                <div className="flex flex-col p-3 rounded-xl bg-white/80 backdrop-blur-sm border border-card-border/60">
+                <div className="flex flex-col p-3 rounded-xl bg-card/80 backdrop-blur-sm border border-card-border/60">
                     <span className="text-[9px] uppercase text-secondary/60 font-bold tracking-widest mb-2">Up Next</span>
                     <div className="flex flex-col gap-1.5">
                         <div className="flex justify-between items-center text-[10px]">
@@ -208,7 +208,7 @@ export function Visualizer() {
                 <div className="flex gap-2">
                     <button
                         onClick={stop}
-                        className="w-10 h-10 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center text-secondary hover:bg-gray-50 active:translate-y-px active:shadow-inner transition-all"
+                        className="w-10 h-10 rounded-full border border-card-border bg-card shadow-sm flex items-center justify-center text-secondary hover:bg-white/5 active:translate-y-px active:shadow-inner transition-all"
                         aria-label="Stop"
                     >
                         <Square size={14} fill="currentColor" />
@@ -216,7 +216,7 @@ export function Visualizer() {
                 </div>
 
                 {/* Main Dial */}
-                <div className="relative w-16 h-16 rounded-full bg-white border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] flex items-center justify-center group">
+                <div className="relative w-16 h-16 rounded-full bg-card border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.2)] flex items-center justify-center group">
                     {/* Outer Ring decoration */}
                     <div className="absolute inset-0 rounded-full border border-gray-100 pointer-events-none" />
 

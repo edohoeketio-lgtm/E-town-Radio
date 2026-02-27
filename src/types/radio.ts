@@ -1,5 +1,7 @@
 export type RadioStatus = 'IDLE' | 'BUFFERING' | 'PLAYING' | 'PAUSED' | 'STOPPED' | 'ERROR';
 export type LogLevel = 'info' | 'warn' | 'error';
+export type UserRole = 'streamer' | 'listener';
+export type BroadcastStatus = 'STANDBY' | 'COUNTDOWN' | 'LIVE';
 
 export interface LogEntry {
     id: string;
@@ -16,6 +18,23 @@ export interface Station {
     sourceUrls: string[];
     tags: string[];
     mockSegments: string[];
+    linkedSources?: MusicSource[];
+}
+
+export interface SpotifyPlaylist {
+    id: string;
+    name: string;
+    tracksCount: number;
+    imageUrl?: string;
+}
+
+export interface MusicSource {
+    id: string;
+    type: 'spotify' | 'apple' | 'youtube' | 'local';
+    name: string;
+    connected: boolean;
+    accessToken?: string;
+    playlists?: SpotifyPlaylist[];
 }
 
 export interface MixOptions {
@@ -28,6 +47,8 @@ export type ProgramMode = 'Continuous Flow' | 'Pulse / Groove' | 'Golden Hour' |
 
 export interface RadioState {
     status: RadioStatus;
+    broadcastStatus: BroadcastStatus;
+    role: UserRole;
     apiKey: string;
     prompt: string;
     bpm: number;
@@ -57,6 +78,7 @@ export interface RadioState {
 
 export type RadioAction =
     | { type: 'SET_STATUS'; status: RadioStatus }
+    | { type: 'SET_ROLE'; role: UserRole }
     | { type: 'SET_API_KEY'; key: string }
     | { type: 'SET_PROMPT'; prompt: string }
     | { type: 'UPDATE_PARAMS'; payload: Partial<Pick<RadioState, 'bpm' | 'density' | 'brightness' | 'scale'>> }
@@ -68,4 +90,7 @@ export type RadioAction =
     | { type: 'UPDATE_NOW_PLAYING'; text: string }
     | { type: 'SET_PROGRAM_MODE'; mode: ProgramMode }
     | { type: 'UPDATE_LISTENERS'; counts: Record<string, number> }
-    | { type: 'UPDATE_SCHEDULE'; schedule: RadioState['schedule'] };
+    | { type: 'UPDATE_SCHEDULE'; schedule: RadioState['schedule'] }
+    | { type: 'ADD_SOURCE'; stationId: string; source: MusicSource }
+    | { type: 'SET_BROADCAST_STATUS'; status: BroadcastStatus }
+    | { type: 'CONNECT_SPOTIFY'; stationId: string; token: string; playlists: SpotifyPlaylist[] };

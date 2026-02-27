@@ -19,16 +19,16 @@ export function DebugLog() {
     };
 
     return (
-        <Card className="col-span-12 min-h-[200px] flex flex-col bg-white border border-card-border shadow-sm rounded-3xl overflow-hidden">
+        <Card className="col-span-12 min-h-[200px] flex flex-col bg-card border border-card-border shadow-sm rounded-3xl overflow-hidden">
             {/* Header */}
-            <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-b border-card-border">
+            <div className="bg-white/5 px-6 py-3 flex items-center justify-between border-b border-card-border">
                 <div className="flex items-center gap-2">
                     <Terminal size={14} className="text-secondary" />
                     <span className="text-[10px] font-mono font-bold text-secondary uppercase tracking-widest leading-none mt-0.5">Diagnostic Console</span>
                 </div>
                 <button
                     onClick={handleClear}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-card-border shadow-sm hover:bg-gray-50 active:translate-y-px transition-all"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded bg-card border border-card-border shadow-sm hover:bg-white/5 active:translate-y-px transition-all"
                 >
                     <Trash2 size={10} className="text-secondary" />
                     <span className="text-[9px] font-bold text-secondary uppercase tracking-wider">Clear</span>

@@ -13,8 +13,8 @@ export function Card({ className, title, children, ...props }: CardProps) {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
             className={cn(
-                "rounded-xl bg-white border border-card-border shadow-sm p-6 relative overflow-hidden",
-                "backdrop-blur-sm bg-opacity-80",
+                "rounded-xl bg-card border border-card-border shadow-sm p-6 relative overflow-hidden",
+                "backdrop-blur-sm",
                 className
             )}
             {...props}
